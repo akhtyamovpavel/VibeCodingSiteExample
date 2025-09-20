@@ -1,8 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from database import get_db
-from models import Topic, Course
-from schemas import Topic as TopicSchema, TopicCreate, TopicUpdate, TopicWithAssignments
+try:  # Prefer package-relative imports when available
+    from ..database import get_db
+    from ..models import Topic, Course
+    from ..schemas import Topic as TopicSchema, TopicCreate, TopicUpdate, TopicWithAssignments
+except ImportError:  # pragma: no cover - fallback for direct execution
+    from database import get_db
+    from models import Topic, Course
+    from schemas import Topic as TopicSchema, TopicCreate, TopicUpdate, TopicWithAssignments
 from typing import List
 
 router = APIRouter()

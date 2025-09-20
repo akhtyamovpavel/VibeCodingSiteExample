@@ -1,6 +1,9 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
-from database import Base
+try:  # Allow imports when package is resolved differently
+    from .database import Base
+except ImportError:  # pragma: no cover - fallback for direct execution
+    from database import Base
 from datetime import datetime
 
 class Course(Base):

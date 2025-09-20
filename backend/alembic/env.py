@@ -8,8 +8,12 @@ import sys
 # Добавляем путь к проекту
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from models import Base
-from database import DATABASE_URL
+try:  # Prefer package-relative imports when available
+    from backend.models import Base
+    from backend.database import DATABASE_URL
+except ImportError:  # pragma: no cover - fallback when executed inside backend/
+    from models import Base
+    from database import DATABASE_URL
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -1,8 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from database import get_db
-from models import Course
-from schemas import Course as CourseSchema, CourseCreate, CourseUpdate, CourseWithTopics
+try:  # Use relative imports when the package is available
+    from ..database import get_db
+    from ..models import Course
+    from ..schemas import Course as CourseSchema, CourseCreate, CourseUpdate, CourseWithTopics
+except ImportError:  # pragma: no cover - fallback for script execution
+    from database import get_db
+    from models import Course
+    from schemas import Course as CourseSchema, CourseCreate, CourseUpdate, CourseWithTopics
 from typing import List
 
 router = APIRouter()
