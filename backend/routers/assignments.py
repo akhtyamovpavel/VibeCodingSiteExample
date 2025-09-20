@@ -1,8 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from database import get_db
-from models import Assignment, Topic, Hint as HintModel
-from schemas import Assignment as AssignmentSchema, AssignmentCreate, AssignmentUpdate, Hint as HintSchema
+try:  # Prefer package-relative imports when available
+    from ..database import get_db
+    from ..models import Assignment, Topic, Hint as HintModel
+    from ..schemas import (
+        Assignment as AssignmentSchema,
+        AssignmentCreate,
+        AssignmentUpdate,
+        Hint as HintSchema,
+    )
+except ImportError:  # pragma: no cover - fallback for direct execution
+    from database import get_db
+    from models import Assignment, Topic, Hint as HintModel
+    from schemas import Assignment as AssignmentSchema, AssignmentCreate, AssignmentUpdate, Hint as HintSchema
 from typing import List
 
 router = APIRouter()

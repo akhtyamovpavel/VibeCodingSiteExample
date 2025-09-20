@@ -1,20 +1,55 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import axios from 'axios';
 import './CourseOverview.css';
+
+const DIFFICULTY_LABELS = {
+  beginner: 'Начальный уровень',
+  intermediate: 'Средний уровень',
+  advanced: 'Продвинутый уровень',
+};
 
 const CourseOverview = () => {
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const location = useLocation();
+  const { courseId: routeCourseId } = useParams();
+
+  const resolvedCourseId = useMemo(() => {
+    const parseId = (value) => {
+      const numeric = Number(value);
+      return Number.isInteger(numeric) && numeric > 0 ? numeric : null;
+    };
+
+    const fromRoute = parseId(routeCourseId);
+    if (fromRoute) {
+      return fromRoute;
+    }
+
+    const searchParams = new URLSearchParams(location.search);
+    const fromQuery = parseId(searchParams.get('courseId'));
+    if (fromQuery) {
+      return fromQuery;
+    }
+
+    return 1;
+  }, [location.search, routeCourseId]);
 
   useEffect(() => {
     const fetchCourse = async () => {
+      setLoading(true);
+      setError(null);
+
       try {
-        const response = await axios.get('/api/courses/1');
+        const response = await axios.get(`/api/courses/${resolvedCourseId}`);
         setCourse(response.data);
       } catch (err) {
-        setError('Ошибка при загрузке информации о курсе');
+        const message =
+          err?.response?.status === 404
+            ? 'Курс не найден. Попробуйте выбрать другой курс на главной странице.'
+            : 'Ошибка при загрузке информации о курсе';
+        setError(message);
         console.error('Error fetching course:', err);
       } finally {
         setLoading(false);
@@ -22,7 +57,7 @@ const CourseOverview = () => {
     };
 
     fetchCourse();
-  }, []);
+  }, [resolvedCourseId]);
 
   if (loading) {
     return <div className="loading">Загрузка информации о курсе...</div>;
@@ -34,6 +69,27 @@ const CourseOverview = () => {
 
   if (!course) {
     return <div className="error">Курс не найден</div>;
+  }
+
+  const difficultyKey =
+    typeof course.difficulty_level === 'string'
+      ? course.difficulty_level.toLowerCase()
+      : 'beginner';
+  const difficultyLabel = DIFFICULTY_LABELS[difficultyKey] || course.difficulty_level;
+  const sortedTopics = [...(course.topics || [])].sort((a, b) => {
+    if (a.order_index === b.order_index) {
+      return a.id - b.id;
+    }
+    return a.order_index - b.order_index;
+  });
+  const descriptionParagraphs = (course.description
+    ? course.description.split('\n')
+    : ['Описание курса появится позже.'])
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+
+  if (descriptionParagraphs.length === 0) {
+    descriptionParagraphs.push('Описание курса появится позже.');
   }
 
   return (
@@ -51,11 +107,32 @@ const CourseOverview = () => {
             <div className="course-description">
               <h2>Описание курса</h2>
               <div className="description-text">
-                {course.description.split('\n').map((paragraph, index) => (
-                  <p key={index}>{paragraph.trim()}</p>
+                {descriptionParagraphs.map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
                 ))}
               </div>
             </div>
+
+            {sortedTopics.length > 0 && (
+              <div className="topics-preview">
+                <h2>Программа курса</h2>
+                <ul className="topics-preview-list">
+                  {sortedTopics.map((topic) => (
+                    <li key={topic.id} className="topic-preview-item">
+                      <span className="topic-order-badge">{topic.order_index}</span>
+                      <div className="topic-preview-content">
+                        <h3>{topic.title}</h3>
+                        <p>{topic.description}</p>
+                        <div className="topic-preview-meta">
+                          <span>⏱️ {topic.duration_minutes} минут</span>
+                          <span>📝 {topic.assignments?.length || 0} заданий</span>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <div className="course-stats">
               <div className="stat-card">
@@ -75,7 +152,7 @@ const CourseOverview = () => {
               <div className="stat-card">
                 <div className="stat-icon">🎯</div>
                 <div className="stat-content">
-                  <div className="stat-value">{course.difficulty_level}</div>
+                  <div className="stat-value">{difficultyLabel}</div>
                   <div className="stat-label">уровень сложности</div>
                 </div>
               </div>

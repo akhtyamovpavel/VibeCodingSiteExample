@@ -6,6 +6,7 @@ const Assignments = () => {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [topics, setTopics] = useState([]);
   const [selectedTopic, setSelectedTopic] = useState('all');
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [activeAssignment, setActiveAssignment] = useState(null);
@@ -30,6 +31,19 @@ const Assignments = () => {
     fetchAssignments();
   }, []);
 
+  useEffect(() => {
+    const fetchTopics = async () => {
+      try {
+        const response = await axios.get('/api/topics/course/1');
+        setTopics(response.data);
+      } catch (err) {
+        console.error('Error fetching topics for filter:', err);
+      }
+    };
+
+    fetchTopics();
+  }, []);
+
   const filteredAssignments = selectedTopic === 'all' 
     ? assignments 
     : assignments.filter(assignment => assignment.topic_id === parseInt(selectedTopic));
@@ -52,9 +66,22 @@ const Assignments = () => {
     }
   };
 
+  const getTopicName = (topicId) => {
+    const topic = topics.find((item) => item.id === topicId);
+    if (!topic) {
+      return `Тема #${topicId}`;
+    }
+    const prefix = topic.order_index ? `${topic.order_index}. ` : '';
+    return `${prefix}${topic.title}`;
+  };
+
   const baseScore = 100;
   const penaltiesSum = hints.slice(0, revealedHints).reduce((sum, h) => sum + (h.penalty || 10), 0);
   const currentScore = Math.max(0, baseScore - penaltiesSum);
+  const visibleHints = hints
+    .slice(0, revealedHints)
+    .sort((a, b) => a.order_index - b.order_index);
+  const shouldShowFallbackHints = visibleHints.length === 0 && noMoreHints;
 
   const defaultVerification = [
     'Проект запускается без ошибок и предупреждений',
@@ -130,6 +157,22 @@ const Assignments = () => {
         <div className="assignments-content">
           <div className="assignments-header">
             <h2>Все задания курса</h2>
+            <div className="assignments-controls">
+              <label htmlFor="topic-filter">Фильтр по теме</label>
+              <select
+                id="topic-filter"
+                value={selectedTopic}
+                onChange={(event) => setSelectedTopic(event.target.value)}
+              >
+                <option value="all">Все темы</option>
+                {topics.map((topic) => (
+                  <option key={topic.id} value={topic.id}>
+                    {topic.order_index ? `${topic.order_index}. ` : ''}
+                    {topic.title}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="assignments-stats">
               <div className="stat">
                 <span className="stat-number">{assignments.length}</span>
@@ -151,55 +194,62 @@ const Assignments = () => {
           </div>
 
           <div className="assignments-grid">
-            {filteredAssignments.map((assignment) => (
-              <div key={assignment.id} className="assignment-card">
-                <div className="assignment-header">
-                  <h3>{assignment.title}</h3>
-                  <div className="assignment-badges">
-                    <span 
-                      className="difficulty"
-                      style={{ backgroundColor: getDifficultyColor(assignment.difficulty_level) }}
-                    >
-                      {getDifficultyLabel(assignment.difficulty_level)}
-                    </span>
-                    <span className={assignment.is_required ? 'required' : 'optional'}>
-                      {assignment.is_required ? 'Обязательное' : 'Дополнительное'}
-                    </span>
+            {filteredAssignments.length > 0 ? (
+              filteredAssignments.map((assignment) => (
+                <div key={assignment.id} className="assignment-card">
+                  <div className="assignment-header">
+                    <h3>{assignment.title}</h3>
+                    <div className="assignment-badges">
+                      <span
+                        className="difficulty"
+                        style={{ backgroundColor: getDifficultyColor(assignment.difficulty_level) }}
+                      >
+                        {getDifficultyLabel(assignment.difficulty_level)}
+                      </span>
+                      <span className={assignment.is_required ? 'required' : 'optional'}>
+                        {assignment.is_required ? 'Обязательное' : 'Дополнительное'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="assignment-description">{assignment.description}</p>
+
+                  <div className="assignment-instructions">
+                    <h4>Инструкции:</h4>
+                    <div className="instructions-text">
+                      {assignment.instructions.split('\n').map((instruction, index) => (
+                        <p key={index}>{instruction.trim()}</p>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="assignment-meta">
+                    <div className="meta-item">
+                      <span className="meta-icon">⏱️</span>
+                      <span className="meta-text">{assignment.estimated_hours} часов</span>
+                    </div>
+                    <div className="meta-item">
+                      <span className="meta-icon">📚</span>
+                      <span className="meta-text">{getTopicName(assignment.topic_id)}</span>
+                    </div>
+                  </div>
+
+                  <div className="assignment-actions">
+                    <button className="btn btn-start">
+                      Начать задание
+                    </button>
+                    <button className="btn btn-secondary" onClick={() => openDetails(assignment)}>
+                      Подробнее
+                    </button>
                   </div>
                 </div>
-                
-                <p className="assignment-description">{assignment.description}</p>
-                
-                <div className="assignment-instructions">
-                  <h4>Инструкции:</h4>
-                  <div className="instructions-text">
-                    {assignment.instructions.split('\n').map((instruction, index) => (
-                      <p key={index}>{instruction.trim()}</p>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="assignment-meta">
-                  <div className="meta-item">
-                    <span className="meta-icon">⏱️</span>
-                    <span className="meta-text">{assignment.estimated_hours} часов</span>
-                  </div>
-                  <div className="meta-item">
-                    <span className="meta-icon">📝</span>
-                    <span className="meta-text">ID: {assignment.topic_id}</span>
-                  </div>
-                </div>
-                
-                <div className="assignment-actions">
-                  <button className="btn btn-start">
-                    Начать задание
-                  </button>
-                  <button className="btn btn-secondary" onClick={() => openDetails(assignment)}>
-                    Подробнее
-                  </button>
-                </div>
+              ))
+            ) : (
+              <div className="assignments-empty">
+                <h3>Заданий для выбранной темы пока нет</h3>
+                <p>Попробуйте выбрать другую тему или сбросить фильтр.</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>
@@ -238,18 +288,32 @@ const Assignments = () => {
                   <div className="score">Текущий балл: {currentScore} / {baseScore}</div>
                 </div>
                 <ul className="hints-list">
-                  {Array.from({ length: Math.max(revealedHints, 0) }).map((_, idx) => (
-                    <li key={idx} className={'hint revealed'}>
-                      {hints[idx] ? hints[idx].text : 'Подсказка загружается...'}
-                    </li>
-                  ))}
+                  {visibleHints.length > 0 ? (
+                    visibleHints.map((hint) => (
+                      <li key={hint.order_index} className="hint revealed">
+                        {hint.text}
+                      </li>
+                    ))
+                  ) : shouldShowFallbackHints ? (
+                    defaultHints.map((hint, idx) => (
+                      <li key={`fallback-${idx}`} className="hint revealed fallback">
+                        {hint}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="hint hidden">Подсказки ещё не открыты.</li>
+                  )}
                 </ul>
                 <button
                   className="btn btn-tertiary"
                   onClick={revealNextHint}
                   disabled={isLoadingHint || noMoreHints}
                 >
-                  {isLoadingHint ? 'Загрузка...' : 'Показать подсказку (−10 баллов)'}
+                  {isLoadingHint
+                    ? 'Загрузка...'
+                    : noMoreHints
+                      ? 'Подсказок больше нет'
+                      : 'Показать подсказку (−10 баллов)'}
                 </button>
               </section>
             </div>

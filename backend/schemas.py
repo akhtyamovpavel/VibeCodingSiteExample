@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import List, Optional
 
@@ -84,10 +84,10 @@ class Assignment(AssignmentBase):
 
 # Схемы с вложенными объектами
 class TopicWithAssignments(Topic):
-    assignments: List[Assignment] = []
+    assignments: List[Assignment] = Field(default_factory=list)
 
 class CourseWithTopics(Course):
-    topics: List[TopicWithAssignments] = []
+    topics: List[TopicWithAssignments] = Field(default_factory=list)
 
 # Схемы для Hint
 class HintBase(BaseModel):
