@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
-from routers import courses, topics, assignments
+from routers import courses, topics, assignments, hints
 
 # Создаем таблицы в базе данных
 Base.metadata.create_all(bind=engine)
@@ -21,6 +21,7 @@ app.add_middleware(
 app.include_router(courses.router, prefix="/api/courses", tags=["courses"])
 app.include_router(topics.router, prefix="/api/topics", tags=["topics"])
 app.include_router(assignments.router, prefix="/api/assignments", tags=["assignments"])
+app.include_router(hints.router, prefix="/api/hints", tags=["hints"])
 
 @app.get("/")
 async def root():
